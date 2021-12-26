@@ -20,8 +20,10 @@ public class z_requester {
 
     public interface z_requestsListenerInterface {
         void onError(IOException e);
+
         void onResult(String value);
     }
+
     public abstract static class z_requestsListener implements z_requestsListenerInterface {
         @Override
         public void onError(IOException e) {
@@ -35,24 +37,22 @@ public class z_requester {
     }
 
     public void special_request(Request request, z_requestsListenerInterface listener) {
-        new Thread(() -> {
-            OkHttpClient client = new OkHttpClient.Builder().readTimeout(25, TimeUnit.SECONDS).certificatePinner(new CertificatePinner.Builder()
-                    .add("api.eviger.ru", "sha256/TiNyS1OoQIAzbv/Rc8rQkuplaF9mcu2Rcl/tUin1TAc=")
-                    .build()).build();
-            client.newCall(request).enqueue(new Callback() {
-                @Override
-                public void onFailure(@NotNull Call call, @NotNull IOException e) {
-                    listener.onError(e);
-                }
+        OkHttpClient client = new OkHttpClient.Builder().readTimeout(25, TimeUnit.SECONDS).certificatePinner(new CertificatePinner.Builder()
+                .add("api.eviger.ru", "sha256/TiNyS1OoQIAzbv/Rc8rQkuplaF9mcu2Rcl/tUin1TAc=")
+                .build()).build();
+        client.newCall(request).enqueue(new Callback() {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e) {
+                listener.onError(e);
+            }
 
-                @Override
-                public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                    if (response.isSuccessful()) {
-                        listener.onResult(Objects.requireNonNull(response.body()).string());
-                    }
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    listener.onResult(Objects.requireNonNull(response.body()).string());
                 }
-            });
-        }).start();
+            }
+        });
     }
 
     private static String requestGet(String url, String[][] params) {
@@ -65,35 +65,41 @@ public class z_requester {
         Request request = new Request.Builder()
                 .url(builder.build())
                 .build();
-        final String result = null;
+        final String[] result = {null};
         z_requester.z_requestsListener requesterListener = new z_requestsListener() {
             @Override
             public void onResult(String value) {
                 super.onResult(value);
-                result = value;
+                result[0] = value;
             }
         };
         requester.special_request(request, requesterListener);
+        while (true) {
+            if (result[0] == null) continue;
+            return result[0];
+        }
     }
 
-    private static void requestPost(String url, String data) {
+    private static String requestPost(String url, String data) {
         z_requester requester = new z_requester();
         RequestBody requestBody = RequestBody.create(data, MediaType.parse("application/json; charset=utf-8"));
         Request request = new Request.Builder()
                 .url(url)
                 .post(requestBody)
                 .build();
+        final String[] result = {null};
         z_requester.z_requestsListener requesterListener = new z_requestsListener() {
             @Override
             public void onResult(String value) {
                 super.onResult(value);
+                result[0] = value;
             }
         };
         requester.special_request(request, requesterListener);
-    }
-
-    public void request() {
-
+        while (true) {
+            if (result[0] == null) continue;
+            return result[0];
+        }
     }
 
 }
